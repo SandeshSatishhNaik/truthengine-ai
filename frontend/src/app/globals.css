@@ -1,0 +1,114 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #0b0f19;
+  --card: #111827;
+  --accent: #8b5cf6;
+  --accent-blue: #3b82f6;
+}
+
+body {
+  background: var(--background);
+  color: #e2e8f0;
+  font-family: "Inter", system-ui, sans-serif;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--background);
+}
+::-webkit-scrollbar-thumb {
+  background: #374151;
+  border-radius: 3px;
+}
+
+/* Gradient text */
+.text-gradient {
+  background: linear-gradient(135deg, #8b5cf6, #3b82f6);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Glow effect */
+.glow {
+  box-shadow: 0 0 20px rgba(139, 92, 246, 0.15);
+}
+
+/* Aurora background effect */
+.aurora-bg {
+  position: relative;
+  overflow: hidden;
+}
+.aurora-bg::before {
+  content: "";
+  position: absolute;
+  inset: -50%;
+  background: radial-gradient(ellipse at 20% 50%, rgba(139, 92, 246, 0.08) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 20%, rgba(59, 130, 246, 0.06) 0%, transparent 50%),
+    radial-gradient(ellipse at 40% 80%, rgba(139, 92, 246, 0.04) 0%, transparent 50%);
+  animation: aurora 20s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+
+@keyframes aurora {
+  0% { transform: translate(0, 0) rotate(0deg) scale(1); }
+  50% { transform: translate(2%, -2%) rotate(1deg) scale(1.02); }
+  100% { transform: translate(-1%, 1%) rotate(-1deg) scale(1); }
+}
+
+/* Grid pattern overlay */
+.grid-pattern {
+  background-image: linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+  background-size: 60px 60px;
+}
+
+/* Smooth scroll */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Typing cursor */
+@keyframes blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+.cursor-blink::after {
+  content: "▋";
+  animation: blink 1s step-end infinite;
+  color: var(--accent);
+}
+
+/* Prose for AI answers */
+.prose-ai h1, .prose-ai h2, .prose-ai h3 {
+  color: white;
+  font-weight: 600;
+  margin-top: 1em;
+  margin-bottom: 0.5em;
+}
+.prose-ai p { margin-bottom: 0.75em; }
+.prose-ai ul, .prose-ai ol {
+  margin-left: 1.5em;
+  margin-bottom: 0.75em;
+}
+.prose-ai li { margin-bottom: 0.25em; }
+.prose-ai strong { color: #c4b5fd; }
+.prose-ai code {
+  background: rgba(139, 92, 246, 0.1);
+  padding: 0.1em 0.4em;
+  border-radius: 4px;
+  font-size: 0.875em;
+}
+
+/* Number counter animation */
+@property --num {
+  syntax: "<integer>";
+  initial-value: 0;
+  inherits: false;
+}
