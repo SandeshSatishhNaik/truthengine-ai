@@ -4,5 +4,10 @@
   "outputDirectory": ".next",
   "installCommand": "npm ci",
   "devCommand": "npm run dev",
-  "regions": ["iad1"]
+  "regions": ["iad1"],
+  "build": {
+    "env": {
+      "NEXT_PUBLIC_API_URL": "https://truthengine-backend.onrender.com/api/v1"
+    }
+  }
 }
