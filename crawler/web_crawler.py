@@ -13,7 +13,12 @@ from backend.config import get_settings
 from backend.retry import retry
 
 HEADERS = {
-    "User-Agent": "TruthEngineBot/0.1 (AI tool research; +https://github.com/truthengine-ai)"
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+    "Accept-Language": "en-US,en;q=0.9",
+    "Accept-Encoding": "gzip, deflate, br",
+    "Connection": "keep-alive",
+    "Upgrade-Insecure-Requests": "1",
 }
 
 # Semaphore for concurrent crawl limiting (initialized lazily)
@@ -50,10 +55,15 @@ def fetch_page(url: str) -> str | None:
         html = _fetch_with_retry(url)
         metrics.pages_crawled.inc()
         return html
-    except requests.RequestException as e:
+    except (requests.RequestException, CrawlBlockedError) as e:
         metrics.crawl_failures.inc()
         logger.error(f"Failed to fetch {url} after retries: {e}")
         return None
+
+
+class CrawlBlockedError(Exception):
+    """Raised when a site intentionally blocks crawling (403/401)."""
+    pass
 
 
 @retry(max_attempts=3, base_delay=2.0, retryable_exceptions=(requests.RequestException,))
@@ -65,6 +75,9 @@ def _fetch_with_retry(url: str) -> str:
         timeout=settings.request_timeout,
         allow_redirects=True,
     )
+    # Don't retry on 403/401 — these are intentional blocks, not transient errors
+    if resp.status_code in (401, 403):
+        raise CrawlBlockedError(f"{resp.status_code} blocked: {url}")
     resp.raise_for_status()
     return resp.text
 

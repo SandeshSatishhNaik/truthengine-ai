@@ -87,9 +87,30 @@ def _ingest_new_tool(url, base_url, parsed, category, metrics):
     logger.info("Phase: Crawling website")
     crawl_results = crawl_tool_website(url)
     if not crawl_results:
-        logger.error(f"Crawling failed for {url}")
-        metrics.ingestions_failed.inc()
-        return None, None
+        # Fallback: use DuckDuckGo search to gather info when direct crawl fails (e.g. 403)
+        logger.warning(f"Direct crawl failed for {url}, falling back to search-based ingestion")
+        domain = parsed.netloc.replace("www.", "")
+        search_refs = search_external_references(domain, max_results=5)
+        if not search_refs:
+            logger.error(f"Both crawl and search fallback failed for {url}")
+            metrics.ingestions_failed.inc()
+            return None, None
+        # Build a synthetic crawl result from search snippets
+        combined_text = "\n".join(
+            f"{ref.get('title', '')}: {ref.get('body', '')}" for ref in search_refs
+        )
+        crawl_results = {
+            "homepage": {
+                "url": url,
+                "text": combined_text,
+                "metadata": {
+                    "title": search_refs[0].get("title", domain) if search_refs else domain,
+                    "description": search_refs[0].get("body", "") if search_refs else "",
+                    "url": url,
+                },
+            }
+        }
+        logger.info(f"Built synthetic crawl data from {len(search_refs)} search results")
 
     # 4. Create initial tool record (placeholder)
     domain = parsed.netloc.replace("www.", "")
