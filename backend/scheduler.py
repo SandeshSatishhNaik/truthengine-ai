@@ -73,6 +73,28 @@ def _discovery_job():
     logger.info(f"Discovery found {len(results)} potential tools")
 
 
+def _keep_alive_job():
+    """Send 'Sandy' ping to Google Sheet to prevent Render free tier spin-down."""
+    import httpx
+    from datetime import datetime, timezone
+
+    from backend.config import get_settings
+
+    settings = get_settings()
+    url = settings.google_sheet_webhook_url
+    if not url:
+        logger.debug("Keep-alive skipped: GOOGLE_SHEET_WEBHOOK_URL not set")
+        return
+
+    now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+    payload = {"keyword": "Sandy", "timestamp": now}
+    try:
+        resp = httpx.post(url, json=payload, timeout=15, follow_redirects=True)
+        logger.info(f"Keep-alive ping sent: {resp.status_code}")
+    except Exception as e:
+        logger.warning(f"Keep-alive ping failed: {e}")
+
+
 def setup_scheduler() -> AsyncIOScheduler:
     """Configure and return the scheduler with default jobs."""
     scheduler = get_scheduler()
@@ -101,5 +123,13 @@ def setup_scheduler() -> AsyncIOScheduler:
         replace_existing=True,
     )
 
-    logger.info("Background scheduler configured with 3 jobs")
+    # Keep-alive: ping Google Sheet every 13 minutes to prevent Render spin-down
+    scheduler.add_job(
+        _wrap_job("keep_alive", _keep_alive_job),
+        trigger=IntervalTrigger(minutes=13),
+        id="keep_alive",
+        replace_existing=True,
+    )
+
+    logger.info("Background scheduler configured with 4 jobs")
     return scheduler

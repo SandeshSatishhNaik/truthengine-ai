@@ -55,6 +55,9 @@ class Settings(BaseSettings):
     # CORS
     cors_origins: str = "http://localhost:3000"
 
+    # Keep-alive: Google Sheet webhook URL (Apps Script web app)
+    google_sheet_webhook_url: str = ""
+
     model_config = {"env_file": str(_ENV_FILE), "env_file_encoding": "utf-8"}
 
 
