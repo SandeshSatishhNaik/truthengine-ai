@@ -14,9 +14,9 @@ router = APIRouter()
 
 @router.get("/tools", response_model=list[ToolResponse])
 @limiter.limit("30/minute")
-async def get_tools(request: Request, category: str | None = None, limit: int = 20, offset: int = 0):
-    """List all tools, optionally filtered by category."""
-    cache_key = f"tools:{category}:{limit}:{offset}"
+async def get_tools(request: Request, category: str | None = None, source_type: str | None = None, limit: int = 20, offset: int = 0):
+    """List all tools, optionally filtered by category and/or source_type."""
+    cache_key = f"tools:{category}:{source_type}:{limit}:{offset}"
     cached = tools_cache.get(cache_key)
     if cached is not None:
         return cached
@@ -24,7 +24,7 @@ async def get_tools(request: Request, category: str | None = None, limit: int = 
     if category:
         rows = get_tools_by_category(category, limit=limit, offset=offset)
     else:
-        rows = list_tools(limit=limit, offset=offset)
+        rows = list_tools(limit=limit, offset=offset, source_type=source_type)
 
     result = [ToolResponse(**row) for row in rows]
     tools_cache.set(cache_key, result)

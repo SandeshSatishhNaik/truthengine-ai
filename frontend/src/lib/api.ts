@@ -46,6 +46,7 @@ export interface Tool {
   community_verdict?: string;
   trust_score?: number;
   tags?: string[];
+  source_type?: string;
   created_at?: string;
 }
 
@@ -78,9 +79,10 @@ export interface AnalysisReport {
 }
 
 // API functions
-export async function getTools(category?: string, limit = 20): Promise<Tool[]> {
+export async function getTools(category?: string, limit = 20, source_type?: string): Promise<Tool[]> {
   const params = new URLSearchParams();
   if (category) params.set("category", category);
+  if (source_type) params.set("source_type", source_type);
   params.set("limit", String(limit));
   return apiFetch<Tool[]>(`/tools?${params}`);
 }

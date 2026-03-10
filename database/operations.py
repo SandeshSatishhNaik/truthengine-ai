@@ -68,12 +68,14 @@ def delete_tool(tool_id: str) -> bool:
         return False
 
 
-def list_tools(limit: int = 20, offset: int = 0) -> list[dict]:
+def list_tools(limit: int = 20, offset: int = 0, source_type: str | None = None) -> list[dict]:
     try:
         client = get_supabase_client()
+        query = client.table("tools").select("*")
+        if source_type:
+            query = query.eq("source_type", source_type)
         result = (
-            client.table("tools")
-            .select("*")
+            query
             .order("created_at", desc=True)
             .range(offset, offset + limit - 1)
             .execute()

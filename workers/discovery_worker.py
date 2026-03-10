@@ -33,7 +33,7 @@ def run_discovery_pipeline(categories: list[str] | None = None, max_per_category
         category = item.get("category", "uncategorized")
 
         try:
-            run_ingestion_pipeline(url, category=category)
+            run_ingestion_pipeline(url, category=category, source_type="discovered")
             new_count += 1
         except Exception as e:
             logger.error(f"Ingestion failed for discovered tool {url}: {e}")

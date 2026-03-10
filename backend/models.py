@@ -41,6 +41,7 @@ class ToolResponse(BaseModel):
     community_verdict: Optional[str] = None
     trust_score: Optional[float] = None
     tags: Optional[list[str]] = []
+    source_type: Optional[str] = "submitted"
     created_at: Optional[datetime] = None
 
     model_config = {"from_attributes": True}

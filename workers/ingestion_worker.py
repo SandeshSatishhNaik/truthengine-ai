@@ -22,7 +22,7 @@ from database.operations import (
 from backend.models import ToolResponse, AnalysisReport
 
 
-def run_ingestion_pipeline(url: str, category: str | None = None) -> AnalysisReport | None:
+def run_ingestion_pipeline(url: str, category: str | None = None, source_type: str = "submitted") -> AnalysisReport | None:
     """
     Full ingestion pipeline (runs synchronously).
     Returns an AnalysisReport with the tool, alternatives, and comparison.
@@ -53,7 +53,7 @@ def run_ingestion_pipeline(url: str, category: str | None = None) -> AnalysisRep
         tool_data = existing
         tool_id = existing["id"]
     else:
-        tool_data, tool_id = _ingest_new_tool(url, base_url, parsed, cat, metrics)
+        tool_data, tool_id = _ingest_new_tool(url, base_url, parsed, cat, metrics, source_type)
         if tool_data is None:
             return None
 
@@ -81,7 +81,7 @@ def run_ingestion_pipeline(url: str, category: str | None = None) -> AnalysisRep
     return report
 
 
-def _ingest_new_tool(url, base_url, parsed, category, metrics):
+def _ingest_new_tool(url, base_url, parsed, category, metrics, source_type="submitted"):
     """Core ingestion phases 3-10. Returns (tool_data, tool_id) or (None, None)."""
     # 3. Crawl website
     logger.info("Phase: Crawling website")
@@ -118,6 +118,7 @@ def _ingest_new_tool(url, base_url, parsed, category, metrics):
         "name": domain,
         "website": base_url,
         "category": category,
+        "source_type": source_type,
     })
     if not tool_record:
         logger.error("Failed to create tool record")

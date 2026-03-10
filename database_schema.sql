@@ -10,6 +10,7 @@ create table tools (
  free_tier_limits text,
  community_verdict text,
  trust_score float,
+ source_type text not null default 'submitted',
  created_at timestamp default now()
 );
 

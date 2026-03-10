@@ -66,6 +66,7 @@ def _ingest_single_alternative(url: str, category: str) -> dict | None:
         "name": domain,
         "website": base_url,
         "category": category,
+        "source_type": "alternative",
     })
     if not tool_record:
         return None

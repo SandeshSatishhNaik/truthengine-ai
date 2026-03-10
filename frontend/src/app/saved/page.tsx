@@ -104,7 +104,7 @@ export default function SavedToolsPage() {
 
   // Fetch tools
   useEffect(() => {
-    getTools(undefined, 100)
+    getTools(undefined, 100, "submitted")
       .then(setTools)
       .catch(() => setTools([]))
       .finally(() => setLoading(false));
