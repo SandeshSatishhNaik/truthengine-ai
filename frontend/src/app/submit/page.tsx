@@ -210,8 +210,8 @@ export default function SubmitPage() {
       const result = await ingestURL(url.trim());
       setReport(result);
     } catch (err) {
-      const msg =
-        err instanceof Error ? err.message : "Something went wrong";
+      let msg = err instanceof Error ? err.message : "Something went wrong";
+      try { msg = JSON.parse(msg).detail || msg; } catch { /* not JSON */ }
       setError(msg);
     } finally {
       setLoading(false);

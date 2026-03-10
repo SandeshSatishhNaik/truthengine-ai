@@ -113,6 +113,7 @@ function SearchPageContent() {
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
   const [followUps, setFollowUps] = useState<string[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
   const handleSearch = useCallback(async (q: string) => {
     if (!q.trim()) return;
@@ -120,6 +121,7 @@ function SearchPageContent() {
     setSearched(true);
     setAnswer(null);
     setFollowUps([]);
+    setError(null);
     try {
       const res: SearchResponse = await searchTools(q.trim());
       setResults(res.results);
@@ -128,6 +130,7 @@ function SearchPageContent() {
     } catch {
       setResults([]);
       setAnswer(null);
+      setError("Search service is temporarily unavailable. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -291,7 +294,7 @@ function SearchPageContent() {
               <div className="mt-16 text-center">
                 <Search className="mx-auto h-10 w-10 text-gray-700" />
                 <p className="mt-4 text-gray-500">
-                  No results found. Try a different query.
+                  {error || "No results found. Try a different query."}
                 </p>
               </div>
             )}

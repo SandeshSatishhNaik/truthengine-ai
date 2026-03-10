@@ -107,26 +107,26 @@ export default function LandingPage() {
   const [stats, setStats] = useState({ tools: 0, tags: 0, categories: 0, avgTrust: 0 });
 
   useEffect(() => {
-    Promise.all([
-      getTools(undefined, 200).catch(() => [] as Tool[]),
-      getSystemMetrics().catch(() => null),
-    ]).then(([tools, metrics]) => {
-      const categories = new Set(tools.map((t) => t.category).filter(Boolean)).size;
-      const avgTrust =
-        tools.length > 0
-          ? Math.round(
-              (tools.reduce((sum, t) => sum + (t.trust_score ?? 0), 0) / tools.length) * 100
-            )
-          : 0;
-      const uniqueTags = metrics
-        ? new Set(tools.flatMap((t) => t.tags ?? [])).size
-        : new Set(tools.flatMap((t) => t.tags ?? [])).size;
-      setStats({
-        tools: tools.length,
-        tags: uniqueTags,
-        categories,
-        avgTrust,
+    const fetchStats = () =>
+      Promise.all([
+        getTools(undefined, 200).catch(() => [] as Tool[]),
+        getSystemMetrics().catch(() => null),
+      ]).then(([tools, metrics]) => {
+        if (tools.length === 0) return false;
+        const categories = new Set(tools.map((t) => t.category).filter(Boolean)).size;
+        const avgTrust =
+          tools.length > 0
+            ? Math.round(
+                (tools.reduce((sum, t) => sum + (t.trust_score ?? 0), 0) / tools.length) * 100
+              )
+            : 0;
+        const uniqueTags = new Set(tools.flatMap((t) => t.tags ?? [])).size;
+        setStats({ tools: tools.length, tags: uniqueTags, categories, avgTrust });
+        return true;
       });
+
+    fetchStats().then((ok) => {
+      if (!ok) setTimeout(() => fetchStats(), 5000);
     });
   }, []);
 
