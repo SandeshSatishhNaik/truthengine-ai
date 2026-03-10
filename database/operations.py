@@ -216,15 +216,42 @@ def vector_search(query_embedding: list[float], limit: int = 10) -> list[dict]:
 def text_search(query: str, limit: int = 10) -> list[dict]:
     """
     Fallback text-based search when embedding service is unavailable.
-    Searches by name, core_function, and tags using ilike.
+    Splits query into keywords and searches name, core_function, category using ilike.
     """
+    _STOP_WORDS = {
+        "a", "an", "the", "is", "are", "was", "were", "be", "been", "being",
+        "what", "which", "who", "whom", "this", "that", "these", "those",
+        "am", "do", "does", "did", "will", "would", "shall", "should",
+        "can", "could", "may", "might", "must", "have", "has", "had",
+        "i", "me", "my", "we", "our", "you", "your", "he", "she", "it",
+        "they", "them", "their", "and", "but", "or", "nor", "not", "so",
+        "for", "of", "in", "on", "at", "to", "from", "with", "by", "about",
+        "how", "very", "most", "best", "top", "good",
+    }
     try:
         client = get_supabase_client()
-        q = f"%{query}%"
+        # Extract meaningful keywords (3+ chars, not stop words)
+        keywords = [
+            w for w in query.lower().split()
+            if len(w) >= 3 and w not in _STOP_WORDS
+        ]
+        if not keywords:
+            keywords = [query.strip()]
+
+        # Build OR filter: each keyword matches name, core_function, or category
+        filters = []
+        for kw in keywords[:5]:  # cap at 5 keywords
+            q = f"%{kw}%"
+            filters.extend([
+                f"name.ilike.{q}",
+                f"core_function.ilike.{q}",
+                f"category.ilike.{q}",
+            ])
+
         result = (
             client.table("tools")
             .select("*")
-            .or_(f"name.ilike.{q},core_function.ilike.{q},category.ilike.{q}")
+            .or_(",".join(filters))
             .order("trust_score", desc=True)
             .limit(limit)
             .execute()
