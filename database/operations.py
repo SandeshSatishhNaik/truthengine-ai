@@ -211,3 +211,25 @@ def vector_search(query_embedding: list[float], limit: int = 10) -> list[dict]:
     except Exception as e:
         logger.error(f"Vector search failed: {e}")
         return []
+
+
+def text_search(query: str, limit: int = 10) -> list[dict]:
+    """
+    Fallback text-based search when embedding service is unavailable.
+    Searches by name, core_function, and tags using ilike.
+    """
+    try:
+        client = get_supabase_client()
+        q = f"%{query}%"
+        result = (
+            client.table("tools")
+            .select("*")
+            .or_(f"name.ilike.{q},core_function.ilike.{q},category.ilike.{q}")
+            .order("trust_score", desc=True)
+            .limit(limit)
+            .execute()
+        )
+        return result.data or []
+    except Exception as e:
+        logger.error(f"Text search failed: {e}")
+        return []

@@ -42,8 +42,13 @@ async def generate_embedding(text: str) -> list[float] | None:
         logger.warning(f"Unexpected embedding result: {type(result)}")
         metrics.agent_errors["embedding"].inc()
         return None
-    except Exception:
+    except Exception as exc:
         metrics.agent_errors["embedding"].inc()
+        # Don't retry on auth errors — token is invalid
+        exc_str = str(exc).lower()
+        if "401" in exc_str or "unauthorized" in exc_str or "403" in exc_str:
+            logger.error(f"HuggingFace auth error (not retrying): {exc}")
+            return None
         raise
 
 

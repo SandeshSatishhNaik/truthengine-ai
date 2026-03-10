@@ -1,8 +1,21 @@
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
 const API_ROOT = process.env.NEXT_PUBLIC_API_URL?.replace(/\/api\/v1$/, "") || "http://localhost:8000";
 
+async function fetchWithRetry(url: string, options?: RequestInit, retries = 2): Promise<Response> {
+  for (let i = 0; i <= retries; i++) {
+    try {
+      const res = await fetch(url, options);
+      if (res.ok || i === retries) return res;
+    } catch {
+      if (i === retries) throw new Error("Network error");
+      await new Promise((r) => setTimeout(r, 2000 * (i + 1)));
+    }
+  }
+  throw new Error("Network error");
+}
+
 async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, {
+  const res = await fetchWithRetry(`${API_BASE}${path}`, {
     headers: { "Content-Type": "application/json", ...options?.headers },
     ...options,
   });
@@ -14,7 +27,7 @@ async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
 }
 
 async function rootFetch<T>(path: string): Promise<T> {
-  const res = await fetch(`${API_ROOT}${path}`, {
+  const res = await fetchWithRetry(`${API_ROOT}${path}`, {
     headers: { "Content-Type": "application/json" },
   });
   if (!res.ok) throw new Error(res.statusText);

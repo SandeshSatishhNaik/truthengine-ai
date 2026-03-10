@@ -10,7 +10,7 @@ from backend.middleware import limiter
 from backend.models import SearchRequest, SearchResponse, SearchResult, ToolResponse
 from agents.embedding_agent import generate_embedding
 from agents.query_agent import generate_answer
-from database.operations import vector_search
+from database.operations import vector_search, text_search
 
 router = APIRouter()
 
@@ -37,12 +37,15 @@ async def semantic_search(request: Request, body: SearchRequest):
     query_embedding = embedding_cache.get(emb_key)
     if query_embedding is None:
         query_embedding = await generate_embedding(body.query)
-        if query_embedding is None:
-            raise HTTPException(status_code=503, detail="Embedding service unavailable.")
-        embedding_cache.set(emb_key, query_embedding)
+        if query_embedding is not None:
+            embedding_cache.set(emb_key, query_embedding)
 
-    # Vector search
-    raw_results = vector_search(query_embedding, limit=body.limit)
+    # Vector search or text fallback
+    if query_embedding is not None:
+        raw_results = vector_search(query_embedding, limit=body.limit)
+    else:
+        logger.warning("Embedding unavailable, falling back to text search")
+        raw_results = text_search(body.query, limit=body.limit)
 
     results = []
     for row in raw_results:

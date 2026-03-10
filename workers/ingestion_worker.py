@@ -179,6 +179,9 @@ def _ingest_new_tool(url, base_url, parsed, category, metrics):
     loop = asyncio.new_event_loop()
     try:
         embedding = loop.run_until_complete(generate_tool_embedding(embedding_data))
+    except Exception as e:
+        logger.warning(f"Embedding generation failed (non-fatal): {e}")
+        embedding = None
     finally:
         loop.close()
     if embedding:
