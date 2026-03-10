@@ -74,22 +74,35 @@ def _discovery_job():
 
 
 def _keep_alive_job():
-    """Send 'Sandy' ping to Google Sheet to prevent Render free tier spin-down."""
+    """Send 'Sandy' ping to Google Sheet and self-ping to prevent Render spin-down."""
+    import os
     import httpx
     from datetime import datetime, timezone
+    from urllib.parse import urlencode
 
     from backend.config import get_settings
 
     settings = get_settings()
+
+    # 1) Self-ping via external URL to generate inbound traffic (prevents Render spin-down)
+    external_url = os.environ.get("RENDER_EXTERNAL_URL", "")
+    if external_url:
+        try:
+            resp = httpx.get(f"{external_url}/api/v1/health", timeout=10)
+            logger.debug(f"Self-ping: {resp.status_code}")
+        except Exception as e:
+            logger.warning(f"Self-ping failed: {e}")
+
+    # 2) Write to Google Sheet via GET (Apps Script 302 redirects drop POST body)
     url = settings.google_sheet_webhook_url
     if not url:
         logger.debug("Keep-alive skipped: GOOGLE_SHEET_WEBHOOK_URL not set")
         return
 
     now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
-    payload = {"keyword": "Sandy", "timestamp": now}
+    params = urlencode({"keyword": "Sandy", "timestamp": now})
     try:
-        resp = httpx.post(url, json=payload, timeout=15, follow_redirects=True)
+        resp = httpx.get(f"{url}?{params}", timeout=15, follow_redirects=True)
         logger.info(f"Keep-alive ping sent: {resp.status_code}")
     except Exception as e:
         logger.warning(f"Keep-alive ping failed: {e}")
