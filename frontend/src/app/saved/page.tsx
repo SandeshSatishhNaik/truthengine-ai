@@ -16,6 +16,7 @@ import {
   Database,
   Pencil,
   Check,
+  Calendar,
 } from "lucide-react";
 import { getTools, deleteTool, updateTool, type Tool } from "@/lib/api";
 import { TagChip } from "@/components/TagChip";
@@ -27,6 +28,37 @@ import { LoadingSkeleton } from "@/components/LoadingSkeleton";
 type SortKey = "name" | "trust_score" | "created_at" | "category";
 type SortDir = "asc" | "desc";
 type ViewMode = "grid" | "list";
+type DateRange = "" | "today" | "yesterday" | "this_week" | "this_month" | "older";
+
+function formatToolDate(dateStr?: string): string {
+  if (!dateStr) return "";
+  const date = new Date(dateStr);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  const dayName = date.toLocaleDateString("en-US", { weekday: "short" });
+  const monthDay = date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  const time = date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+  if (diffDays === 0) return `Today, ${time}`;
+  if (diffDays === 1) return `Yesterday, ${time}`;
+  if (diffDays < 7) return `${dayName}, ${monthDay}`;
+  return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+
+function getDateRange(dateStr?: string): DateRange {
+  if (!dateStr) return "older";
+  const date = new Date(dateStr);
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const startOfYesterday = new Date(startOfToday.getTime() - 86400000);
+  const startOfWeek = new Date(startOfToday.getTime() - startOfToday.getDay() * 86400000);
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  if (date >= startOfToday) return "today";
+  if (date >= startOfYesterday) return "yesterday";
+  if (date >= startOfWeek) return "this_week";
+  if (date >= startOfMonth) return "this_month";
+  return "older";
+}
 
 const PREDEFINED_CATEGORIES = [
   "AI Assistants",
@@ -62,6 +94,7 @@ export default function SavedToolsPage() {
   const [selectedPricing, setSelectedPricing] = useState<string | null>(null);
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [minTrust, setMinTrust] = useState(0);
+  const [dateRange, setDateRange] = useState<DateRange>("");
 
   // Sort & View
   const [sortKey, setSortKey] = useState<SortKey>("created_at");
@@ -131,6 +164,7 @@ export default function SavedToolsPage() {
     if (selectedPricing) result = result.filter((t) => t.pricing_model === selectedPricing);
     if (selectedTag) result = result.filter((t) => t.tags?.includes(selectedTag));
     if (minTrust > 0) result = result.filter((t) => (t.trust_score ?? 0) >= minTrust / 100);
+    if (dateRange) result = result.filter((t) => getDateRange(t.created_at) === dateRange);
 
     result = [...result].sort((a, b) => {
       let cmp = 0;
@@ -142,7 +176,7 @@ export default function SavedToolsPage() {
     });
 
     return result;
-  }, [tools, search, selectedCategory, selectedPricing, selectedTag, minTrust, sortKey, sortDir]);
+  }, [tools, search, selectedCategory, selectedPricing, selectedTag, minTrust, dateRange, sortKey, sortDir]);
 
   // Delete handler
   const handleDelete = async (id: string, name: string) => {
@@ -175,9 +209,20 @@ export default function SavedToolsPage() {
     setSelectedPricing(null);
     setSelectedTag(null);
     setMinTrust(0);
+    setDateRange("");
   };
 
-  const activeFilterCount = [selectedCategory, selectedPricing, selectedTag, minTrust > 0 ? true : null].filter(Boolean).length;
+  const activeFilterCount = [selectedCategory, selectedPricing, selectedTag, minTrust > 0 ? true : null, dateRange || null].filter(Boolean).length;
+
+  // Date range counts
+  const dateRangeCounts = useMemo(() => {
+    const counts: Record<string, number> = { today: 0, yesterday: 0, this_week: 0, this_month: 0, older: 0 };
+    tools.forEach((t) => {
+      const r = getDateRange(t.created_at);
+      if (r) counts[r] = (counts[r] || 0) + 1;
+    });
+    return counts;
+  }, [tools]);
 
   return (
     <main className="min-h-screen bg-background pt-24 pb-16">
@@ -301,7 +346,26 @@ export default function SavedToolsPage() {
                   )}
                 </div>
 
-                <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-5">
+                  {/* Date Added */}
+                  <div>
+                    <label className="mb-1.5 block text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Date Added
+                    </label>
+                    <select
+                      value={dateRange}
+                      onChange={(e) => setDateRange(e.target.value as DateRange)}
+                      className="w-full rounded-lg border border-white/10 bg-background px-3 py-2 text-sm text-white focus:border-accent/40 focus:outline-none"
+                    >
+                      <option value="">All Dates</option>
+                      {dateRangeCounts.today > 0 && <option value="today">Today ({dateRangeCounts.today})</option>}
+                      {dateRangeCounts.yesterday > 0 && <option value="yesterday">Yesterday ({dateRangeCounts.yesterday})</option>}
+                      {dateRangeCounts.this_week > 0 && <option value="this_week">This Week ({dateRangeCounts.this_week})</option>}
+                      {dateRangeCounts.this_month > 0 && <option value="this_month">This Month ({dateRangeCounts.this_month})</option>}
+                      {dateRangeCounts.older > 0 && <option value="older">Older ({dateRangeCounts.older})</option>}
+                    </select>
+                  </div>
+
                   {/* Category */}
                   <div>
                     <label className="mb-1.5 block text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -398,6 +462,12 @@ export default function SavedToolsPage() {
             )}
             {minTrust > 0 && (
               <FilterChip label={`Trust ≥ ${minTrust}%`} onRemove={() => setMinTrust(0)} />
+            )}
+            {dateRange && (
+              <FilterChip
+                label={`Date: ${dateRange === "today" ? "Today" : dateRange === "yesterday" ? "Yesterday" : dateRange === "this_week" ? "This Week" : dateRange === "this_month" ? "This Month" : "Older"}`}
+                onRemove={() => setDateRange("")}
+              />
             )}
           </div>
         )}
@@ -548,8 +618,15 @@ function GridCard({
         <PricingBadge model={tool.pricing_model} />
       </div>
 
+      {tool.created_at && (
+        <div className="mt-2 flex items-center gap-1.5 text-xs text-gray-600">
+          <Calendar className="h-3 w-3" />
+          {formatToolDate(tool.created_at)}
+        </div>
+      )}
+
       {tool.core_function && (
-        <p className="mt-3 text-sm text-gray-400 line-clamp-2">{tool.core_function}</p>
+        <p className="mt-2 text-sm text-gray-400 line-clamp-2">{tool.core_function}</p>
       )}
 
       {tool.free_tier_limits && (
@@ -626,6 +703,12 @@ function ListRow({
             {tool.name}
           </a>
           <PricingBadge model={tool.pricing_model} />
+          {tool.created_at && (
+            <span className="hidden items-center gap-1 text-xs text-gray-600 sm:inline-flex">
+              <Calendar className="h-3 w-3" />
+              {formatToolDate(tool.created_at)}
+            </span>
+          )}
         </div>
         {tool.core_function && (
           <p className="mt-0.5 truncate text-sm text-gray-500">{tool.core_function}</p>
