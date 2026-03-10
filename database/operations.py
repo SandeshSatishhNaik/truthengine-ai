@@ -226,7 +226,7 @@ def text_search(query: str, limit: int = 10) -> list[dict]:
         "i", "me", "my", "we", "our", "you", "your", "he", "she", "it",
         "they", "them", "their", "and", "but", "or", "nor", "not", "so",
         "for", "of", "in", "on", "at", "to", "from", "with", "by", "about",
-        "how", "very", "most", "best", "top", "good",
+        "how", "very", "most", "top",
     }
     try:
         client = get_supabase_client()
@@ -238,7 +238,7 @@ def text_search(query: str, limit: int = 10) -> list[dict]:
         if not keywords:
             keywords = [query.strip()]
 
-        # Build OR filter: each keyword matches name, core_function, or category
+        # Build OR filter: each keyword matches searchable fields
         filters = []
         for kw in keywords[:5]:  # cap at 5 keywords
             q = f"%{kw}%"
@@ -246,6 +246,8 @@ def text_search(query: str, limit: int = 10) -> list[dict]:
                 f"name.ilike.{q}",
                 f"core_function.ilike.{q}",
                 f"category.ilike.{q}",
+                f"pricing_model.ilike.{q}",
+                f"free_tier_limits.ilike.{q}",
             ])
 
         result = (
